@@ -1,7 +1,8 @@
-import fs from 'fs';
+// import fs from 'fs';
 import path from 'path';
 import rtlsdr from 'rtl-sdr';
 import Demodulator from 'mode-s-demodulator';
+import { connect } from 'mongodb';
 
 const numDevices = rtlsdr.get_device_count()
 if (!numDevices) {
@@ -21,7 +22,12 @@ rtlsdr.set_sample_rate(device, 2000000);
 rtlsdr.reset_buffer(device);
 
 const demodulator = new Demodulator();
-const file = path.join(__dirname,'../dump','airtrack.json');
+// const file = path.join(__dirname,'../dump','airtrack.json');
+let db = null, flight = null;
+connect('mongodb://localhost:27017').then(client => { 
+    db = client.db("airtrack");
+    flight = db.collection('flight');
+});
 
 const identities = [];
 const aircrafts = [];
@@ -62,6 +68,7 @@ rtlsdr.read_async(
                 }
             }
             if (index !== -1) {
+                aircrafts[index].date = Date.now();
                 if (payload.callsign !== '') {
                     aircrafts[index].callsign = payload.callsign;
                 }
@@ -83,7 +90,15 @@ rtlsdr.read_async(
                 if (payload.unit !== null) {
                     aircrafts[index].unit = payload.unit;
                 }
-                fs.writeFileSync(file, JSON.stringify(aircrafts, null, 2)); //, (err) => { console.error(`Unable to append to file: ${file}`) });
+                // fs.writeFileSync(file, JSON.stringify(aircrafts, null, 2)); //, (err) => { console.error(`Unable to append to file: ${file}`) });
+                const a = aircrafts[index];
+                if (a.callsign
+                    && a.rawLatitude
+                    && a.rawLongitude
+                    && a.altitude) {
+                    flight.insert(a);
+                }
+                
             }
         });
     },
