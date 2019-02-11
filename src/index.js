@@ -37,9 +37,10 @@ rtlsdr.read_async(
     device,
     (data, len) => {
         demodulator.process(data, len, (msg) => {
-            console.log(msg);
+            // console.log(msg);
             
             const payload = {
+                _id: new Date().getTime() + (parseInt(Math.random() * 100)).toString(),
                 icao: msg.callsign.slice(0,3), // msg.icao,
                 callsign: msg.callsign,
                 identity: msg.identity,
@@ -68,6 +69,7 @@ rtlsdr.read_async(
                 }
             }
             if (index !== -1) {
+                aircrafts[index]._id = payload._id;
                 aircrafts[index].date = Date.now();
                 if (payload.callsign !== '') {
                     aircrafts[index].callsign = payload.callsign;
@@ -96,6 +98,7 @@ rtlsdr.read_async(
                     && a.rawLatitude
                     && a.rawLongitude
                     && a.altitude) {
+                    console.log(a);
                     flight.insert(a);
                 }
                 
